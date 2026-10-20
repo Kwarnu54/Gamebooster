@@ -5,6 +5,7 @@
 #import <mach/mach.h>
 
 #define GB_BLUE   [UIColor colorWithRed:0.20 green:0.60 blue:1.00 alpha:1.0]
+#define GB_RED    [UIColor colorWithRed:1.00 green:0.35 blue:0.35 alpha:1.0]
 #define GB_BLACK  [UIColor colorWithWhite:0.04 alpha:0.82]
 
 static BOOL      gShowHUD = YES;
@@ -14,6 +15,8 @@ static BOOL      gAutoThermal = YES;
 static NSInteger gEffectiveCap = 60;
 static NSInteger gPing = -1;
 static NSHashTable *gLinks;
+static UIView   *gBox;
+static UIView   *gPill;
 static UILabel  *gHUD;
 static UIButton *gBtn;
 static CADisplayLink *gMeter;
@@ -106,10 +109,11 @@ static void GBApplyCap(void) {
 
     NSProcessInfoThermalState t = NSProcessInfo.processInfo.thermalState;
     NSString *pingStr = gPing >= 0 ? [NSString stringWithFormat:@"%ldms", (long)gPing] : @"--";
-    gHUD.text = [NSString stringWithFormat:
-        @"FPS  %ld / %ld\nTEMP %@\nRAM  %.0f MB\nPING %@\nRES  %.0f%%",
-        (long)fps, (long)gEffectiveCap, GBThermalName(t), GBMemoryMB(), pingStr, gScale * 100];
-    gHUD.hidden = !gShowHUD;
+    gHUD.text = [NSString stringWithFormat:@"%ld/%ld FPS · %@\n%.0fMB · %@ · %.0f%%",
+        (long)fps, (long)gEffectiveCap, GBThermalName(t),
+        GBMemoryMB(), pingStr, gScale * 100];
+    gHUD.textColor = (t >= NSProcessInfoThermalStateSerious) ? GB_RED : GB_BLUE;
+    gPill.hidden = !gShowHUD;
 }
 
 - (void)thermalChanged { GBApplyCap(); }
@@ -138,7 +142,9 @@ static void GBApplyCap(void) {
     a.view.tintColor = GB_BLUE;
 
     [a addAction:[UIAlertAction actionWithTitle:gShowHUD ? @"FPS HUD: ON" : @"FPS HUD: OFF"
-        style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) { gShowHUD = !gShowHUD; GBSave(); }]];
+        style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) {
+            gShowHUD = !gShowHUD; GBSave(); gPill.hidden = !gShowHUD;
+        }]];
 
     [a addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"Frame cap: %ld (tap to toggle 30/60)", (long)gCap]
         style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) { gCap = (gCap == 60) ? 30 : 60; GBSave(); GBApplyCap(); }]];
@@ -162,35 +168,44 @@ static void GBApplyCap(void) {
 static void GBSetupUI(void) {
     UIWindow *w = GBWindow();
     if (!w) return;
-    if (gHUD.superview == w) return;
+    if (gBox.superview == w) return;
 
-    if (!gHUD) {
-        gHUD = [[UILabel alloc] initWithFrame:CGRectMake(10, 44, 140, 92)];
-        gHUD.numberOfLines = 0;
-        gHUD.font = [UIFont fontWithName:@"Menlo-Bold" size:11];
+    if (!gBox) {
+        CGFloat top = MAX(w.safeAreaInsets.top, 20.0) + 4.0;
+        CGFloat left = w.safeAreaInsets.left + 8.0;
+        gBox = [[UIView alloc] initWithFrame:CGRectMake(left, top, 152, 40)];
+
+        gPill = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 118, 40)];
+        gPill.backgroundColor = GB_BLACK;
+        gPill.layer.cornerRadius = 8;
+        gPill.layer.borderWidth = 1;
+        gPill.layer.borderColor = GB_BLUE.CGColor;
+        gPill.layer.masksToBounds = YES;
+
+        gHUD = [[UILabel alloc] initWithFrame:CGRectMake(6, 3, 106, 34)];
+        gHUD.numberOfLines = 2;
+        gHUD.font = [UIFont fontWithName:@"Menlo-Bold" size:10];
+        gHUD.adjustsFontSizeToFitWidth = YES;
+        gHUD.minimumScaleFactor = 0.7;
         gHUD.textColor = GB_BLUE;
-        gHUD.backgroundColor = GB_BLACK;
-        gHUD.layer.cornerRadius = 10;
-        gHUD.layer.borderWidth = 1;
-        gHUD.layer.borderColor = GB_BLUE.CGColor;
-        gHUD.layer.masksToBounds = YES;
-        gHUD.userInteractionEnabled = YES;
-        gHUD.text = @" GAME BOOST";
-        [gHUD addGestureRecognizer:[[UIPanGestureRecognizer alloc] initWithTarget:GBHelper.shared action:@selector(pan:)]];
+        gHUD.text = @"GAME BOOST";
+        [gPill addSubview:gHUD];
 
         gBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-        gBtn.frame = CGRectMake(10, 140, 44, 30);
+        gBtn.frame = CGRectMake(122, 5, 30, 30);
         gBtn.backgroundColor = GB_BLACK;
         gBtn.layer.cornerRadius = 8;
         gBtn.layer.borderWidth = 1;
         gBtn.layer.borderColor = GB_BLUE.CGColor;
         [gBtn setTitle:@"⚡" forState:UIControlStateNormal];
         [gBtn addTarget:GBHelper.shared action:@selector(openMenu) forControlEvents:UIControlEventTouchUpInside];
-        [gBtn addGestureRecognizer:[[UIPanGestureRecognizer alloc] initWithTarget:GBHelper.shared action:@selector(pan:)]];
+
+        [gBox addSubview:gPill];
+        [gBox addSubview:gBtn];
+        [gBox addGestureRecognizer:[[UIPanGestureRecognizer alloc] initWithTarget:GBHelper.shared action:@selector(pan:)]];
     }
-    [w addSubview:gHUD];
-    [w addSubview:gBtn];
-    gHUD.hidden = !gShowHUD;
+    [w addSubview:gBox];
+    gPill.hidden = !gShowHUD;
 }
 
 %hook CADisplayLink
