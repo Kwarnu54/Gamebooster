@@ -6,7 +6,8 @@
   <dict>
     <key>Bundles</key>
     <array>
-      <string>com.apple.UIKit</string>
+      <string>com.tencent.ig</string>
+      <!-- add more game bundle IDs here -->
     </array>
   </dict>
 </dict>
