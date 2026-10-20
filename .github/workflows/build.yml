@@ -10,25 +10,17 @@ jobs:
     runs-on: macos-latest
     env:
       THEOS: ${{ github.workspace }}/theos
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Theos
         run: |
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive --depth=1 https://github.com/theos/theos.git $THEOS
+          git clone --depth=1 https://github.com/theos/sdks.git $THEOS/sdks-repo
+          mv $THEOS/sdks-repo/*.sdk $THEOS/sdks/ || true
 
-      - name: Install iOS SDK
-        run: |
-          cd $THEOS/sdks
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip -q master.zip
-          mv sdks-master/*.sdk . || true
-          rm -rf sdks-master master.zip
-
-      - name: Build package
-        run: |
-          make package FINALPACKAGE=1 DEBUG=0
+      - name: Build
+        run: make package FINALPACKAGE=1
 
       - name: Upload .deb
         uses: actions/upload-artifact@v4
