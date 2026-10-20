@@ -7,17 +7,12 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
-    env:
-      THEOS: ${{ github.workspace }}/theos
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Theos
-        run: |
-          git clone --recursive --depth=1 https://github.com/theos/theos.git $THEOS
-          git clone --depth=1 https://github.com/theos/sdks.git $THEOS/sdks-repo
-          mv $THEOS/sdks-repo/*.sdk $THEOS/sdks/ || true
+      - name: Set up Theos
+        uses: Randomblock1/theos-action@v1
 
       - name: Build
         run: make package FINALPACKAGE=1
