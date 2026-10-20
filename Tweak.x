@@ -100,7 +100,7 @@ static void GBApplyCap(void) {
     CFTimeInterval now = CACurrentMediaTime();
     if (now - gLastT < 1.0) return;
     double dt = now - gLastT;
-    int32_t metal = gMetalFrames; gMetalFrames = 0;
+    int32_t metal = __atomic_exchange_n(&gMetalFrames, 0, __ATOMIC_RELAXED);
     NSInteger fps = metal > 0 ? (NSInteger)round(metal / dt) : (NSInteger)round(gTicks / dt);
     gTicks = 0; gLastT = now;
 
@@ -206,7 +206,7 @@ static void GBSetupUI(void) {
 
 %hook CAMetalLayer
 - (id<CAMetalDrawable>)nextDrawable {
-    OSAtomicIncrement32(&gMetalFrames);
+    __atomic_fetch_add(&gMetalFrames, 1, __ATOMIC_RELAXED);
     return %orig;
 }
 - (void)setDrawableSize:(CGSize)size {
