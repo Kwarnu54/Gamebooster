@@ -1,0 +1,9 @@
+Package: com.yourname.gameboost
+Name: GameBoost
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Caps frame rate to 60 FPS for selected apps.
+Maintainer: YourName
+Author: YourName
+Section: Tweaks
+Depends: mobilesubstrate
